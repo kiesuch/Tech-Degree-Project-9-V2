@@ -71,9 +71,26 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // User GET request (Needs authenticator)
+// 'findAll where' query referenced from 
+// https://sequelize.org/master/manual/model-querying-basics.html
 app.get('/api/users', authenticateUser, asyncHandler(async (req, res, next)=> {
 	console.log("Get user request test");
-	res.json([req.currentUser]);
+	// Select 
+	const user = await User.findAll({
+		where: {
+			id: req.currentUser.id,
+		},
+		// ** EXCEEDS **
+		attributes: {
+			exclude: [
+				'password',
+				'createdAt',
+				'updatedAt'
+			]	
+		}
+	})
+	// Respond with the requested information excluding
+	res.json([user]);
 }));
 
 // User POST request 
@@ -87,7 +104,7 @@ app.post('/api/users', [
 		.withMessage('Last name field is required'),
 	check('emailAddress')
 		.exists({ checkNull: true, checkFalsy: true })
-		.withMessage('Email address field is required'),
+		.withMessage('A valid Email address field is required'),
 	check('password')
 		.exists({ checkNull: true, checkFalsy: true })
 		.withMessage('Password field is required'),
@@ -95,7 +112,7 @@ app.post('/api/users', [
 	console.log("Post user request test");
 	// Attempt to get the validation result from the Request object.
 	const errors = validationResult(req);
-
+	
 	// If there are validation errors...
 	if (!errors.isEmpty()) {
 		// Use the Array `map()` method to get a list of error messages.
@@ -111,26 +128,39 @@ app.post('/api/users', [
 	// **I initially had the password hash statemnt in the else statment but decided otherwise since the password would still be in plain text if the given emailAddress already existed.
 	user.password = bcryptjs.hashSync(user.password);
 	
-	// Find all of the existing users and only store the emailAddresses attribute
-	const existingUsers = await User.findAll({
-		attributes: ["emailAddress"]
-	});
-	// 
-	const existingEmailAddresses = JSON.stringify(existingUsers);
+	// ** I was attempting to find ways to validate an email without using the model validator so I could use the specified error code and message but the exceeds does not specify which error code should be used* *
 	
-	// Search the array for a duplicate emailAddress.
-	if (existingEmailAddresses.includes(user.emailAddress)){
-		// If the emailAddress already exists, display the error message.
-		res.status(400).send({error: `The given email is already paired to a user.`})
-	} else {
-	// If the emailAddress does not already exist in the database, create the user.
-	await User.create(user);
-	users.push(user);
-	// Location Redirect Referenced from https://www.geeksforgeeks.org/express-js-res-location-function/
-	res.location('/');
-	// Return the no content status code.
-	return res.status(201).end();
-	}
+	// Check for a valid email address 
+	// ** EXCEEDS **
+	/*console.log(user.emailAddress);
+	console.log((user.emailAddress).isEmail);
+	if (!(user.emailAddress.isEmail)){
+		console.log("Valid Email Address");	
+	*/	
+		// Find all of the existing users and only store the emailAddresses for comparison
+		const existingUsers = await User.findAll({
+			attributes: ["emailAddress"]
+		});
+		// stringify the results for use of 'array.includes' function
+		const existingEmailAddresses = JSON.stringify(existingUsers);
+		
+		// Search the array for a duplicate emailAddress.
+		if (existingEmailAddresses.includes(user.emailAddress)){
+			// If the emailAddress already exists, display the error message.
+			res.status(400).send({error: `The given email is already paired to a user.`})
+		} else {
+		// If the emailAddress does not already exist in the database, create the user.
+		await User.create(user);
+		users.push(user);
+		// Location Redirect Referenced from https://www.geeksforgeeks.org/express-js-res-location-function/
+		res.location('/');
+		// Respond with the 'no content' status code.
+		res.status(201).end();
+		}
+	/*} else {
+		console.log("Invalid Email Address");
+		res.status(400).send({error: `Please provide a valid email address`})
+	}*/
 }));
 
 // Module export.

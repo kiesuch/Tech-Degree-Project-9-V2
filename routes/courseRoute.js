@@ -119,7 +119,13 @@ app.get('/api/courses/:id', asyncHandler(async (req, res) =>{
 				'lastName',
 				'emailAddress'
 				]
-		}]	
+		}],
+		// ** EXCEEDS **
+		attributes: {
+			exclude: [
+				'createdAt',
+				'updatedAt'
+			]}		
 	});
 	// Check to see if the requested course exists.
 	// Altered solution of the update non-existing course error
@@ -134,7 +140,7 @@ app.get('/api/courses/:id', asyncHandler(async (req, res) =>{
 }));
 
 // Course POST Request.
-// Code referenced from "Rest API authentication with express" Instruction, section: "Adding Validation to the User Registration Route".
+// "Express Validator Check" referenced from "Rest API authentication with express" Instruction, section: "Adding Validation to the User Registration Route".
 app.post('/api/courses', [
 	check('title')
 		.exists({ checkNull: true, checkFalsy: true })
@@ -165,10 +171,41 @@ app.post('/api/courses', [
 }));
 
 // Course PUT Request (Needs Authenticator).
-app.put('/api/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
+// "Express Validator Check" referenced from "Rest API authentication with express" Instruction, section: "Adding Validation to the User Registration Route".
+app.put('/api/courses/:id', [
+	check('title')
+		.exists({ checkNull: true, checkFalsy: true })
+		.withMessage('The Title field is required'),
+	check('description')
+		.exists({ checkNull: true, checkFalsy: true })
+		.withMessage('The Description field is required'),
+], authenticateUser, asyncHandler(async (req, res) => {
 	console.log("Put course request test");
-	// Initial testing status code
-	res.sendStatus(200);
+	const errors = validationResult(req);
+
+	// If there are validation errors...
+	if (!errors.isEmpty()) {
+		const errorMessages = errors.array().map(error => error.msg);
+		return res.status(400).json({ errors: errorMessages });
+	}
+	const user = req.currentUser;
+	const course = await Course.findByPk(req.params.id);
+	// Check to see if the specified course exists
+	if (course){
+		// Check to see if the user owns the course
+		if (user.id === course.userId){
+			// User owns the course
+			res.sendStatus(204).end();
+		} else {
+			// User does not own the course
+			// Respond with the 'forbidden' status code.
+			// ** EXCEEDS **
+			res.status(403).send({error: `You are not allowed to modify this course`});
+		}
+	} else {
+		// Respond with the 'bad request' status code.
+		res.status(400).send({error: `The requested course does not exist`});
+	}
 	
 }))
 
@@ -179,16 +216,18 @@ app.delete('/api/courses/:id', authenticateUser, asyncHandler(async (req, res) =
 	const course = await Course.findByPk(req.params.id);
 	// Check to see if a course with the specified id exists
 	if (course){
+		// The course does exist
 		// Check to see if the user owns the course
 		if (user.id === course.userId){
-			// User owns the course so the course will be deleted
+			// User owns the course
 			course.destroy();
 			// Respond with the 'no content' status code.
 			res.sendStatus(204).end();
 		} else {
-			// User is not the owner of the course so the course will not be delete
-			// Respond with the 'unauthorized' status code.
-			res.status(401).send({error: `You are not allowed to delete this course`});
+			// User does not own the course
+			// Respond with the 'forbidden' status code.
+			// ** EXCEEDS **
+			res.status(403).send({error: `You are not allowed to delete this course`});
 		}
 	} else {
 		// Respond with the 'bad request' status code.

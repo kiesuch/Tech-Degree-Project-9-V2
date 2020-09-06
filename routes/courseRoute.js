@@ -95,7 +95,8 @@ app.get('/api/courses', asyncHandler(async (req, res) =>{
 	});
 	// Check to see if any courses exist
 	// After dealing with the update course that doesn't exist error, I decided to implement altered solutions where applicable.
-	if (courses == []){
+	console.log(courses.length);
+	if (courses.length !== 0){
 		// At least one course exists
 		res.json({courses});
 	} else {

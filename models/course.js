@@ -14,6 +14,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+	  // Foreign key creation referenced from
+	  // https://sequelize.org/master/class/lib/associations/base.js~Association.html
 		Course.belongsTo(models.User, {
 			as: 'user',
 			foreignKey: {

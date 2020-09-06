@@ -102,7 +102,9 @@ app.get('/api/courses', asyncHandler(async (req, res) =>{
 	} else {
 		// No courses exist
 		// Display error message as opposed to: "course": []"
-		res.status(400).send({error: `No courses exist`});
+		// res.status(400).send({error: `No courses exist`});
+		// ** Slack Response from Marie helped confirmed my suspicions of not needing to set an error status code.
+		res.json("No courses exist");
 	}
 }));
 

@@ -165,8 +165,13 @@ app.post('/api/courses', [
 	// Create the new course.
 	await Course.create(course);
 	coursesArray.push(course);
+	// Find all courses
+	const newCourse = await Course.findAll({})
 	// Location Redirect Referenced from https://www.geeksforgeeks.org/express-js-res-location-function/
-	res.location('/api/courses/' + course.id); 
+	// Find the last (Newest) courses in the array and get the courseId.
+	// ** I am aware this solution may not be the best one but I was unsure of what else I could do **
+	res.location('/api/courses/' + (newCourse[newCourse.length - 1]).id); 
+	console.log((newCourse[newCourse.length - 1]).id);
 	// Respond with the 'created' status code.
 	res.status(201).end();
 	
